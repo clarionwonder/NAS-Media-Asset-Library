@@ -177,6 +177,7 @@ async function signThumbs(rows){
   (data||[]).forEach(d => { if(d.signedUrl) thumbs[d.path] = d.signedUrl; });
 }
 function thumbUrl(a){
+  if (thumbs[a.thumb_key]) return thumbs[a.thumb_key];   // thumbnail tersimpan (semua orang boleh lihat)
   if (a.source === "gdrive" && a.source_id) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(a.source_id)}&sz=w480`;
   return thumbs[a.thumb_key];
 }

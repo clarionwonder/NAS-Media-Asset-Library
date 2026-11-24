@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import re
 import json
 import os
 import subprocess
@@ -202,3 +203,102 @@ class LocalSource:
             return out or None
         except Exception:
             return None
+
+
+# ---------------- Google Drive ----------------
+
+class GDriveSource:
+    """Baca folder Google Drive guna service account (folder mesti dikongsi kepada emel service account).
+
+    Root dalam config: senarai {id: <folder id>, name: <nama paparan>}.
+    nas_path disimpan sebagai  gdrive:/<name>/<subfolder>/<fail>  supaya teka-tag ikut folder tetap berfungsi.
+    """
+
+    FIELDS = ("nextPageToken, files(id, name, mimeType, size, modifiedTime, createdTime, "
+              "thumbnailLink, webViewLink, imageMediaMetadata(width, height), "
+              "videoMediaMetadata(width, height, durationMillis))")
+
+    def __init__(self, cfg: dict, full_cfg: dict):
+        self.cfg = cfg
+        self.full = full_cfg
+        self.folders = {f"gdrive:/{f['name']}": f["id"] for f in cfg.get("folders", [])}
+        self.s = None
+
+    def login(self, otp=None):
+        from google.auth.transport.requests import AuthorizedSession
+        from google.oauth2 import service_account
+        scopes = ["https://www.googleapis.com/auth/drive.readonly"]
+        raw = self.cfg.get("service_account_json") or os.environ.get("GDRIVE_SA_JSON")
+        if raw and raw.strip().startswith("{"):
+            creds = service_account.Credentials.from_service_account_info(json.loads(raw), scopes=scopes)
+        else:
+            path = self.cfg.get("service_account_file") or raw
+            if not path:
+                raise SystemExit("gdrive: tetapkan GDRIVE_SA_JSON atau gdrive.service_account_file")
+            creds = service_account.Credentials.from_service_account_file(path, scopes=scopes)
+        self.s = AuthorizedSession(creds)
+
+    def logout(self):
+        pass
+
+    def _list(self, folder_id: str) -> Iterator[dict]:
+        token = None
+        while True:
+            r = self.s.get("https://www.googleapis.com/drive/v3/files", params={
+                "q": f"'{folder_id}' in parents and trashed = false",
+                "fields": self.FIELDS, "pageSize": 1000, "pageToken": token,
+                "supportsAllDrives": "true", "includeItemsFromAllDrives": "true",
+            }, timeout=60)
+            r.raise_for_status()
+            j = r.json()
+            yield from j.get("files", [])
+            token = j.get("nextPageToken")
+            if not token:
+                return
+
+    def walk(self, root: str) -> Iterator[FileEntry]:
+        folder_id = self.folders.get(root)
+        if not folder_id:
+            print(f"  ! tiada folder Drive untuk {root} dalam config gdrive.folders")
+            return
+        stack = [(folder_id, root)]
+        while stack:
+            fid, path = stack.pop()
+            for f in self._list(fid):
+                p = f"{path}/{f['name']}"
+                if f["mimeType"] == "application/vnd.google-apps.folder":
+                    if not is_ignored(p + "/x", self.full):
+                        stack.append((f["id"], p))
+                    continue
+                if is_ignored(p, self.full):
+                    continue
+                if not media_kind(PurePosixPath(f["name"]).suffix.lower().lstrip("."), self.full):
+                    continue
+                meta = f.get("imageMediaMetadata") or f.get("videoMediaMetadata") or {}
+                dur = meta.get("durationMillis")
+                yield FileEntry(
+                    p, int(f["size"]) if f.get("size") else None,
+                    _rfc3339(f.get("modifiedTime")), _rfc3339(f.get("createdTime")),
+                    extra={"width": meta.get("width"), "height": meta.get("height"),
+                           "duration_sec": int(dur) / 1000 if dur else None,
+                           "source": "gdrive", "source_id": f["id"],
+                           "web_url": f.get("webViewLink"), "_thumb": f.get("thumbnailLink")})
+
+    def thumbnail(self, entry: FileEntry, kind: str) -> bytes | None:
+        link = entry.extra.get("_thumb")
+        if not link:
+            return None  # Drive belum jana thumbnail (biasa untuk video yang baru dimuat naik)
+        link = re.sub(r"=s\d+$", f"=s{THUMB_MAX}", link)
+        try:
+            r = self.s.get(link, timeout=60)
+            r.raise_for_status()
+        except Exception:
+            return None
+        return _to_jpeg(r.content)
+
+
+def _rfc3339(v: str | None) -> float | None:
+    if not v:
+        return None
+    from datetime import datetime
+    return datetime.fromisoformat(v.replace("Z", "+00:00")).timestamp()

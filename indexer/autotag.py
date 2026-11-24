@@ -40,11 +40,9 @@ Jangan teka nama orang atau jenama yang tidak jelas kelihatan."""
 
 
 def suggest(client: anthropic.Anthropic, model: str, img: bytes, kind: str, path: str) -> dict:
-    resp = client.beta.messages.create(
+    req = dict(
         model=model,
         max_tokens=2000,
-        betas=["server-side-fallback-2026-07-01"],
-        fallbacks="default",
         output_config={"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA}},
         messages=[{"role": "user", "content": [
             {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
@@ -52,6 +50,11 @@ def suggest(client: anthropic.Anthropic, model: str, img: bytes, kind: str, path
             {"type": "text", "text": PROMPT.format(kind=kind, path=path)},
         ]}],
     )
+    if model.startswith(("claude-opus-5", "claude-sonnet-5-5", "claude-fable")):
+        # Jika model menolak imej (refusal), API cuba semula dengan model fallback secara automatik
+        resp = client.beta.messages.create(**req, betas=["server-side-fallback-2026-07-01"], fallbacks="default")
+    else:
+        resp = client.messages.create(**req)
     if resp.stop_reason == "refusal":
         raise RuntimeError("model menolak imej ini")
     text = next(b.text for b in resp.content if b.type == "text")
@@ -67,7 +70,7 @@ def main() -> int:
 
     cfg = load_config(args.config)
     at = cfg.get("autotag", {})
-    model = at.get("model", "claude-opus-5-5")
+    model = at.get("model", "claude-haiku-5-5")
     limit = args.limit or at.get("batch_limit", 200)
     db = Supabase(cfg["supabase"]["url"], cfg["supabase"]["service_key"])
     client = anthropic.Anthropic()

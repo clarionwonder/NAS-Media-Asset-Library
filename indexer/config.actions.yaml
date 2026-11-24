@@ -1,0 +1,89 @@
+# Config untuk GitHub Actions (.github/workflows/index.yml). Tiada rahsia di sini:
+# key dibaca dari GitHub Secrets melalui env var.
+
+supabase:
+  url: https://xjykwwwkdbkzouplwodb.supabase.co
+  # service_role key: Supabase > Project Settings > API. Rahsia! Hanya untuk indexer.
+  service_key: ${SUPABASE_SERVICE_KEY}   # boleh guna env var
+
+# Pilih satu sumber:
+#   gdrive      - folder Google Drive (service account)
+#   filestation - NAS dari mana-mana PC via QuickConnect/VPN/LAN
+#   local       - indexer berjalan di NAS sendiri, atau folder NAS di-mount ke PC
+source: gdrive
+
+gdrive:
+  # JSON service account: env GDRIVE_SA_JSON (isi JSON) atau laluan fail di bawah
+  service_account_file: null
+  folders:                     # kongsi setiap folder kepada emel service account (Viewer)
+    - id: 1bLYOlHblL13MT7O0sUc8QIETJuOJJBY-
+      name: GER Test Photo
+
+filestation:
+  # LAN: http://192.168.1.10:5000  | VPN: alamat dalaman | QuickConnect: https://ID.quickconnect.to
+  base_url: http://192.168.1.10:5000
+  username: indexer            # cadangan: akaun khas baca-sahaja, tanpa 2FA
+  password: ${NAS_PASSWORD}
+  verify_ssl: true
+  thumb_size: medium           # small | medium | large
+
+local:
+  # Peta folder tempatan -> laluan shared folder di NAS
+  # Di NAS (DSM): /volume1/Media  ->  /Media
+  # Di PC (SMB mount): /Volumes/Media atau Z:\  ->  /Media
+  mounts:
+    - local: /volume1/Media
+      nas: /Media
+
+# Folder NAS untuk di-index (laluan shared folder, bermula dengan /)
+roots:
+  - /Media
+
+# Fail yang diambil kira
+extensions:
+  video: [mp4, mov, mxf, avi, mkv, m4v, mts, r3d, braw]
+  image: [jpg, jpeg, png, heic, tif, tiff, webp, cr2, cr3, nef, arw, dng, psd]
+
+# Abaikan folder/fail yang sepadan (glob)
+ignore:
+  - "*/@eaDir/*"
+  - "*/#recycle/*"
+  - "*/.*"
+  - "*/Proxy/*"
+
+# Teka tag dari struktur folder (relatif kepada root). Cuba ikut turutan; yang pertama sepadan digunakan.
+# Medan: {year} {country} {campaign} {partner} {asset_type} {*} (abaikan satu tahap)
+path_patterns:
+  - "{year}/{country}/{campaign}/{asset_type}"
+  - "{year}/{campaign}/{asset_type}"
+  - "{year}/{campaign}"
+
+# Normalkan nama folder -> nilai tag
+asset_type_aliases:
+  broll: B-roll
+  b-roll: B-roll
+  "b roll": B-roll
+  testimoni: Testimoni
+  testimonial: Testimoni
+  foto: Foto
+  photo: Foto
+  photos: Foto
+  gambar: Foto
+
+country_aliases:
+  my: Malaysia
+  malaysia: Malaysia
+  id: Indonesia
+  indo: Indonesia
+  sg: Singapura
+  th: Thailand
+
+# Jenis lalai jika folder tidak beritahu
+default_asset_type:
+  image: Foto
+  video: null
+
+# AI auto-tag (pilihan). Perlu ANTHROPIC_API_KEY dalam env.
+autotag:
+  model: claude-haiku-5-5    # murah & memadai untuk tag (~USD 2 / 10k gambar). claude-opus-5-5 lebih teliti, ~40x kos
+  batch_limit: 200           # had aset per larian
