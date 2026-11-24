@@ -5,9 +5,18 @@ supabase:
   # service_role key: Supabase > Project Settings > API. Rahsia! Hanya untuk indexer.
   service_key: ${SUPABASE_SERVICE_KEY}   # boleh guna env var
 
-# Pilih satu sumber: filestation (dari mana-mana PC via QuickConnect/VPN/LAN)
-# atau local (indexer berjalan di NAS sendiri, atau folder NAS di-mount ke PC)
+# Pilih satu sumber:
+#   gdrive      - folder Google Drive (service account)
+#   filestation - NAS dari mana-mana PC via QuickConnect/VPN/LAN
+#   local       - indexer berjalan di NAS sendiri, atau folder NAS di-mount ke PC
 source: filestation
+
+gdrive:
+  # JSON service account: env GDRIVE_SA_JSON (isi JSON) atau laluan fail di bawah
+  service_account_file: null
+  folders:                     # kongsi setiap folder kepada emel service account (Viewer)
+    - id: 1bLYOlHblL13MT7O0sUc8QIETJuOJJBY-
+      name: GER Test Photo
 
 filestation:
   # LAN: http://192.168.1.10:5000  | VPN: alamat dalaman | QuickConnect: https://ID.quickconnect.to
@@ -75,5 +84,5 @@ default_asset_type:
 
 # AI auto-tag (pilihan). Perlu ANTHROPIC_API_KEY dalam env.
 autotag:
-  model: claude-opus-5-5     # untuk volum besar, claude-haiku-5-5 jauh lebih murah
+  model: claude-haiku-5-5    # murah & memadai untuk tag (~USD 2 / 10k gambar). claude-opus-5-5 lebih teliti, ~40x kos
   batch_limit: 200           # had aset per larian

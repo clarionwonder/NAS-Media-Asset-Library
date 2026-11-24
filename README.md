@@ -63,6 +63,27 @@ Team boleh betulkan dalam UI; suntingan kekal walaupun indexer berjalan semula.
    Model lalai `claude-opus-5-5`; untuk ribuan fail, `claude-haiku-5-5` dalam config jauh lebih murah.
 5. **Frontend**: isi `frontend/config.js` (URL Supabase, anon key, alamat QuickConnect), hos dua fail itu.
 
+## Auto-index & AI auto-tag automatik (GitHub Actions)
+
+Workflow `.github/workflows/index.yml` berjalan **setiap jam** (dan boleh dijalankan manual di tab Actions):
+1. `indexer.py --config config.actions.yaml` — imbas folder Google Drive, simpan metadata + thumbnail ke Supabase.
+2. `autotag.py` — hantar thumbnail baharu ke Claude (lalai `claude-haiku-5-5`, ~USD 2 / 10k gambar) dan simpan
+   cadangan tag (objek, lokasi, bilangan orang, jenis). Cadangan terus boleh dicari dalam aplikasi.
+
+**Sediakan sekali (GitHub > Settings > Secrets and variables > Actions > New repository secret):**
+
+| Secret | Dari mana |
+|---|---|
+| `SUPABASE_SERVICE_KEY` | Supabase > Project Settings > API Keys > `service_role` (atau secret key) |
+| `ANTHROPIC_API_KEY` | console.anthropic.com > API Keys |
+| `GDRIVE_SA_JSON` | Isi penuh fail JSON service account Google (lihat bawah) |
+
+**Service account Google Drive:**
+1. console.cloud.google.com → cipta projek → *APIs & Services > Library* → hidupkan **Google Drive API**.
+2. *IAM & Admin > Service Accounts* → Create → (tiada peranan diperlukan) → *Keys > Add key > JSON* → muat turun.
+3. Di Google Drive, **kongsi folder media kepada emel service account** (`...@...iam.gserviceaccount.com`) sebagai *Viewer*.
+4. Tambah folder lain dalam `indexer/config.actions.yaml` di bawah `gdrive.folders`.
+
 ## Keselamatan
 - `service_role` key hanya dalam indexer (PC/NAS), tidak pernah dalam frontend.
 - Frontend guna anon key + RLS: hanya pengguna log masuk boleh baca, dan hanya lajur tag/status boleh disunting.

@@ -18,7 +18,7 @@ import time
 from datetime import datetime, timezone
 
 from common import FileEntry, Supabase, infer_tags, load_config, media_kind, thumb_key
-from sources import FileStationSource, LocalSource
+from sources import FileStationSource, GDriveSource, LocalSource
 
 
 def iso(ts):
@@ -36,7 +36,13 @@ def main() -> int:
 
     cfg = load_config(args.config)
     kind = cfg.get("source", "filestation")
-    src = FileStationSource(cfg["filestation"], cfg) if kind == "filestation" else LocalSource(cfg["local"], cfg)
+    if kind == "gdrive":
+        src = GDriveSource(cfg["gdrive"], cfg)
+        cfg["roots"] = [f"gdrive:/{f['name']}" for f in cfg["gdrive"].get("folders", [])]
+    elif kind == "filestation":
+        src = FileStationSource(cfg["filestation"], cfg)
+    else:
+        src = LocalSource(cfg["local"], cfg)
     db = None if args.dry_run else Supabase(cfg["supabase"]["url"], cfg["supabase"]["service_key"])
 
     t0 = time.time()
@@ -58,7 +64,8 @@ def main() -> int:
                 mk = media_kind(e.ext, cfg)
                 old = existing.get(e.nas_path)
                 mtime_iso = iso(e.mtime)
-                if old and old["size_bytes"] == e.size and _same_time(old["file_mtime"], e.mtime) and not old["missing"]:
+                if old and old["size_bytes"] == e.size and _same_time(old["file_mtime"], e.mtime) and not old["missing"] \
+                        and (old["thumb_key"] or args.no_thumbs):
                     n_same += 1
                     continue
                 if args.limit and not old and n_new >= args.limit:
@@ -80,6 +87,9 @@ def main() -> int:
                 }
                 if tkey:
                     file_fields["thumb_key"] = tkey
+                for k in ("source", "source_id", "web_url"):
+                    if e.extra.get(k):
+                        file_fields[k] = e.extra[k]
 
                 if args.dry_run:
                     tags = infer_tags(e.nas_path, root, mk, cfg)
@@ -94,8 +104,10 @@ def main() -> int:
                     db.patch(old["id"], file_fields)
                     n_changed += 1
                 else:
-                    new_rows.append({"nas_path": e.nas_path, **file_fields,
-                                     **infer_tags(e.nas_path, root, mk, cfg)})
+                    tags = infer_tags(e.nas_path, root, mk, cfg)
+                    if not tags.get("year") and e.mtime:
+                        tags["year"] = datetime.fromtimestamp(e.mtime, timezone.utc).year
+                    new_rows.append({"nas_path": e.nas_path, **file_fields, **tags})
                     n_new += 1
                     if len(new_rows) >= 200:
                         db.insert(new_rows)
