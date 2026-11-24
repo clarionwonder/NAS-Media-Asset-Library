@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pustaka Media</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#14171c;--mute:#667085;--line:#e4e7ec;--acc:#2f5bea;--ok:#127a3f;--warn:#a15c00;--bad:#b42318;--chip:#eef2ff}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#171a21;--ink:#e8eaee;--mute:#98a2b3;--line:#2a2f3a;--acc:#7c9bff;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--chip:#1f2640}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+h1{font-size:16px;margin:0 12px 0 0}
+input,select,textarea,button{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+input[type=search]{flex:1;min-width:200px;font-size:15px}
+button{cursor:pointer}button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.filters{margin-top:8px}.filters select{max-width:170px}
+main{padding:16px}.meta{color:var(--mute);margin-bottom:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer}
+.card:hover{border-color:var(--acc)}
+.th{aspect-ratio:16/9;background:#0002 center/cover no-repeat;position:relative}
+.th .k{position:absolute;left:6px;top:6px;background:#000a;color:#fff;font-size:11px;padding:1px 6px;border-radius:4px}
+.card .b{padding:8px 10px}.fn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:99px;border:1px solid currentColor;margin-top:4px}
+.st.bebas_guna{color:var(--ok)}.st.perlu_izin_partner{color:var(--warn)}.st.dalaman_sahaja{color:var(--bad)}.st.belum_semak{color:var(--mute)}
+.chip{display:inline-block;background:var(--chip);border-radius:99px;padding:1px 8px;margin:2px 4px 2px 0;font-size:12px}
+.chip button{border:0;background:none;padding:0 0 0 4px;color:var(--mute)}
+#more{display:block;margin:16px auto}
+aside{position:fixed;inset:0 0 0 auto;width:min(480px,100%);background:var(--card);border-left:1px solid var(--line);z-index:10;overflow:auto;padding:16px;transform:translateX(100%);transition:.2s}
+aside.open{transform:none}aside img{width:100%;border-radius:8px;background:#0002}
+aside label{display:block;font-size:12px;color:var(--mute);margin:10px 0 3px}aside input,aside select,aside textarea{width:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.ai{border:1px dashed var(--acc);border-radius:8px;padding:10px;margin-top:14px}
+.ai h3{margin:0 0 6px;font-size:13px}
+.ai .chip{cursor:pointer;border:1px solid var(--acc)}
+.path{font-family:ui-monospace,monospace;font-size:12px;word-break:break-all;color:var(--mute)}
+#login{max-width:360px;margin:15vh auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px}
+#login input{width:100%;margin:8px 0}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;display:none;z-index:20}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div id="login" class="hide">
+  <h1>Pustaka Media</h1>
+  <p class="meta">Log masuk dengan emel kerja. Kami hantar pautan log masuk ke emel anda.</p>
+  <input id="email" type="email" placeholder="nama@syarikat.com" autocomplete="email">
+  <button class="pri" id="sendLink" style="width:100%">Hantar pautan log masuk</button>
+  <p id="loginMsg" class="meta"></p>
+</div>
+
+<div id="app" class="hide">
+<header>
+  <div class="row">
+    <h1>Pustaka Media</h1>
+    <input id="q" type="search" placeholder="Cari nama fail, kempen, partner, tag, objek… (cth: raya testimoni kampung)">
+    <button id="logout" title="Log keluar">Keluar</button>
+  </div>
+  <div class="row filters">
+    <select id="f_campaign"><option value="">Semua kempen</option></select>
+    <select id="f_country"><option value="">Semua negara</option></select>
+    <select id="f_partner"><option value="">Semua partner</option></select>
+    <select id="f_year"><option value="">Semua tahun</option></select>
+    <select id="f_asset_type"><option value="">Semua jenis</option></select>
+    <select id="f_usage">
+      <option value="">Semua status guna</option>
+      <option value="bebas_guna">Bebas guna</option>
+      <option value="perlu_izin_partner">Iklan perlu izin partner</option>
+      <option value="dalaman_sahaja">Dalaman sahaja</option>
+      <option value="belum_semak">Belum semak</option>
+    </select>
+    <select id="f_kind"><option value="">Video & gambar</option><option value="video">Video</option><option value="image">Gambar</option></select>
+    <select id="sort"><option value="file_mtime.desc">Terbaru</option><option value="file_mtime.asc">Terlama</option><option value="filename.asc">Nama A-Z</option><option value="size_bytes.desc">Saiz terbesar</option></select>
+    <button id="reset">Set semula</button>
+  </div>
+</header>
+<main>
+  <div class="meta" id="count"></div>
+  <div class="grid" id="grid"></div>
+  <button id="more" class="hide">Muat lagi</button>
+</main>
+</div>
+
+<aside id="detail"></aside>
+<div id="toast"></div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const C = window.MAL_CONFIG;
+const sb = supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY);
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const USAGE = {bebas_guna:"Bebas guna", perlu_izin_partner:"Iklan perlu izin partner", dalaman_sahaja:"Dalaman sahaja", belum_semak:"Belum semak"};
+const FACETS = ["campaign","country","partner","year","asset_type"];
+let page = 0, items = [], thumbs = {}, user = null, loadSeq = 0;
+
+function toast(t){ const el=$("#toast"); el.textContent=t; el.style.display="block"; clearTimeout(toast.t); toast.t=setTimeout(()=>el.style.display="none",1800); }
+function fmtSize(b){ if(!b) return ""; const u=["B","KB","MB","GB","TB"]; let i=0; while(b>=1024&&i<4){b/=1024;i++} return b.toFixed(i?1:0)+" "+u[i]; }
+function fmtDur(s){ if(!s) return ""; s=Math.round(s); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+function fmtDate(d){ return d ? new Date(d).toLocaleDateString("ms-MY",{day:"numeric",month:"short",year:"numeric"}) : ""; }
+
+// ---------- Auth ----------
+async function initAuth(){
+  if (!C.REQUIRE_LOGIN) {           // mod terbuka: URL terus masuk
+    $("#logout").classList.add("hide");
+    user = { email: null }; route(); return;
+  }
+  const { data:{ session } } = await sb.auth.getSession();
+  sb.auth.onAuthStateChange((_e, s) => { if (!!s !== !!user) { user = s?.user || null; route(); } });
+  user = session?.user || null; route();
+}
+function route(){
+  $("#login").classList.toggle("hide", !!user);
+  $("#app").classList.toggle("hide", !user);
+  if (user) { loadFacets(); readURL(); search(true); }
+}
+$("#sendLink").onclick = async () => {
+  const email = $("#email").value.trim(); if(!email) return;
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split("#")[0], shouldCreateUser:false } });
+  $("#loginMsg").textContent = error ? "Gagal: " + error.message : "Semak emel anda untuk pautan log masuk.";
+};
+$("#logout").onclick = () => sb.auth.signOut();
+
+// ---------- Facets ----------
+async function loadFacets(){
+  const { data, error } = await sb.from("asset_facets").select("*");
+  if (error) return toast("Gagal muat penapis");
+  for (const f of FACETS){
+    const sel = $("#f_"+f), keep = sel.value, first = sel.options[0].outerHTML;
+    const vals = data.filter(r=>r.facet===f).sort((a,b)=> f==="year" ? b.value-a.value : a.value.localeCompare(b.value));
+    sel.innerHTML = first + vals.map(v=>`<option value="${esc(v.value)}">${esc(v.value)} (${v.n})</option>`).join("");
+    sel.value = keep;
+  }
+}
+
+// ---------- Search ----------
+function readURL(){
+  const p = new URLSearchParams(location.hash.slice(1));
+  $("#q").value = p.get("q")||"";
+  for (const f of [...FACETS,"usage","kind"]) { const el=$("#f_"+f); if(el) el.value = p.get(f)||""; }
+  if (p.get("sort")) $("#sort").value = p.get("sort");
+}
+function writeURL(){
+  const p = new URLSearchParams();
+  if ($("#q").value.trim()) p.set("q", $("#q").value.trim());
+  for (const f of [...FACETS,"usage","kind"]) { const v=$("#f_"+f).value; if(v) p.set(f,v); }
+  if ($("#sort").value !== "file_mtime.desc") p.set("sort",$("#sort").value);
+  history.replaceState(null,"","#"+p.toString());
+}
+async function search(reset){
+  const seq = ++loadSeq;
+  if (reset){ page=0; items=[]; $("#grid").innerHTML=""; writeURL(); }
+  const [col, dir] = $("#sort").value.split(".");
+  let q = sb.from("assets").select("*", { count:"exact" }).eq("missing", false)
+            .order(col, { ascending: dir==="asc", nullsFirst:false })
+            .range(page*C.PAGE_SIZE, (page+1)*C.PAGE_SIZE-1);
+  for (const w of $("#q").value.toLowerCase().split(/\s+/).filter(Boolean)) q = q.ilike("search_text", `%${w.replace(/[%_,()]/g,"")}%`);
+  for (const f of FACETS){ const v=$("#f_"+f).value; if(v) q = q.eq(f, f==="year" ? +v : v); }
+  if ($("#f_usage").value) q = q.eq("usage", $("#f_usage").value);
+  if ($("#f_kind").value) q = q.eq("media_kind", $("#f_kind").value);
+  const { data, count, error } = await q;
+  if (seq !== loadSeq) return;
+  if (error) { toast("Ralat carian: "+error.message); return; }
+  await signThumbs(data);
+  items.push(...data); page++;
+  $("#count").textContent = `${count ?? 0} aset`;
+  $("#grid").insertAdjacentHTML("beforeend", data.map(card).join(""));
+  $("#more").classList.toggle("hide", items.length >= (count||0));
+}
+async function signThumbs(rows){
+  const keys = rows.map(r=>r.thumb_key).filter(k=>k && !thumbs[k]);
+  if (!keys.length) return;
+  const { data } = await sb.storage.from("thumbnails").createSignedUrls(keys, 3600);
+  (data||[]).forEach(d => { if(d.signedUrl) thumbs[d.path] = d.signedUrl; });
+}
+function thumbUrl(a){
+  if (a.source === "gdrive" && a.source_id) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(a.source_id)}&sz=w480`;
+  return thumbs[a.thumb_key];
+}
+function myName(){ try { return localStorage.getItem("mal_name") || ""; } catch { return ""; } }
+function card(a){
+  const t = thumbUrl(a);
+  const sub = [a.campaign, a.country, a.year].filter(Boolean).join(" · ");
+  return `<div class="card" data-id="${a.id}">
+    <div class="th" style="${t?`background-image:url('${t}')`:""}"><span class="k">${a.media_kind==="video"?"▶ "+fmtDur(a.duration_sec):"Foto"}</span></div>
+    <div class="b"><div class="fn" title="${esc(a.filename)}">${esc(a.filename)}</div>
+    <div class="sub">${esc(sub||"Tiada tag")} ${a.asset_type?"· "+esc(a.asset_type):""}</div>
+    <span class="st ${a.usage}">${USAGE[a.usage]}</span></div></div>`;
+}
+let deb; $("#q").oninput = () => { clearTimeout(deb); deb=setTimeout(()=>search(true), 250); };
+document.querySelectorAll(".filters select").forEach(s => s.onchange = () => search(true));
+$("#reset").onclick = () => { $("#q").value=""; document.querySelectorAll(".filters select").forEach(s=>s.selectedIndex=0); search(true); };
+$("#more").onclick = () => search(false);
+$("#grid").onclick = e => { const c=e.target.closest(".card"); if(c) openDetail(items.find(i=>i.id===c.dataset.id)); };
+
+// ---------- Links ----------
+function fileStationLink(a){
+  const dir = a.nas_path.slice(0, a.nas_path.lastIndexOf("/")) || "/";
+  return `${C.NAS_WEB_URL.replace(/\/$/,"")}/index.cgi?launchApp=SYNO.SDS.App.FileStation3.Instance&launchParam=${encodeURIComponent("openfile="+encodeURIComponent(dir))}`;
+}
+function smbPath(a){
+  if (!C.SMB_PREFIX) return "";
+  const win = C.SMB_PREFIX.startsWith("\\");
+  return C.SMB_PREFIX + (win ? a.nas_path.replace(/\//g,"\\") : a.nas_path);
+}
+async function copy(t, msg){ try { await navigator.clipboard.writeText(t); toast(msg); } catch { prompt("Salin:", t); } }
+
+// ---------- Detail / edit ----------
+function openDetail(a){
+  const t = thumbUrl(a), s = a.ai_suggestions, isDrive = a.source === "gdrive";
+  const tagChips = (a.tags||[]).map(x=>`<span class="chip">${esc(x)}<button data-rm="${esc(x)}" title="Buang">×</button></span>`).join("");
+  const ai = s ? `<div class="ai"><h3>Cadangan AI (klik untuk tambah)</h3>
+      <div class="meta">${esc(s.description)}</div>
+      <div class="meta">👥 ${s.people_count} orang · 📍 ${esc(s.location)} (${esc(s.setting)}) · jenis: ${esc(s.suggested_asset_type)}</div>
+      <div>${[...new Set([...(s.tags||[]),...(s.objects||[])])].filter(x=>!(a.tags||[]).includes(x)).map(x=>`<span class="chip" data-add="${esc(x)}">+ ${esc(x)}</span>`).join("")}</div>
+      ${!a.asset_type && s.suggested_asset_type!=="Lain-lain" ? `<button data-type="${esc(s.suggested_asset_type)}" style="margin-top:6px">Guna jenis: ${esc(s.suggested_asset_type)}</button>`:""}
+    </div>` : "";
+  $("#detail").innerHTML = `
+    <div class="row" style="justify-content:space-between"><strong style="word-break:break-all">${esc(a.filename)}</strong><button id="close">Tutup</button></div>
+    ${t?`<img src="${t}" alt="">`:`<div class="meta">Tiada thumbnail</div>`}
+    <div class="path">${esc(a.nas_path)}</div>
+    <div class="meta">${fmtSize(a.size_bytes)} ${a.width?`· ${a.width}×${a.height}`:""} ${a.duration_sec?`· ${fmtDur(a.duration_sec)}`:""} · ${fmtDate(a.file_mtime)}</div>
+    <div class="row">${isDrive
+      ? `<button class="pri" id="cpLink">Salin link Drive</button><a href="${esc(a.web_url)}" target="_blank" rel="noopener"><button>Buka di Google Drive</button></a>`
+      : `<button class="pri" id="cpLink">Salin link NAS</button>${C.SMB_PREFIX?`<button id="cpSmb">Salin laluan rangkaian</button>`:""}<a href="${fileStationLink(a)}" target="_blank" rel="noopener"><button>Buka di File Station</button></a>`}</div>
+    <label>Status guna</label>
+    <select id="e_usage">${Object.entries(USAGE).map(([k,v])=>`<option value="${k}" ${a.usage===k?"selected":""}>${v}</option>`).join("")}</select>
+    <label>Nota kebenaran (cth. tarikh tamat izin, nama pelulus)</label>
+    <input id="e_usage_note" value="${esc(a.usage_note)}">
+    <div class="two">
+      <div><label>Kempen</label><input id="e_campaign" value="${esc(a.campaign)}" list="dl_campaign"></div>
+      <div><label>Negara</label><input id="e_country" value="${esc(a.country)}" list="dl_country"></div>
+      <div><label>Partner</label><input id="e_partner" value="${esc(a.partner)}" list="dl_partner"></div>
+      <div><label>Tahun</label><input id="e_year" type="number" value="${esc(a.year)}"></div>
+    </div>
+    <label>Jenis</label>
+    <select id="e_asset_type">${["","B-roll","Testimoni","Foto","Lain-lain"].map(v=>`<option ${a.asset_type===v?"selected":""} value="${v}">${v||"—"}</option>`).join("")}${a.asset_type&&!["B-roll","Testimoni","Foto","Lain-lain"].includes(a.asset_type)?`<option selected>${esc(a.asset_type)}</option>`:""}</select>
+    <label>Tag</label>
+    <div id="tagBox">${tagChips}</div>
+    <input id="e_newtag" placeholder="Tambah tag dan tekan Enter">
+    ${ai}
+    ${user.email ? "" : `<label>Nama anda (untuk rekod siapa ubah)</label><input id="e_name" value="${esc(myName())}" placeholder="cth: Aina, team digital">`}
+    <div class="row" style="margin-top:14px"><button class="pri" id="save">Simpan</button><span class="meta">${a.updated_by?`Disunting oleh ${esc(a.updated_by)} · ${fmtDate(a.updated_at)}`:""}</span></div>
+    ${FACETS.filter(f=>f!=="year"&&f!=="asset_type").map(f=>`<datalist id="dl_${f}">${[...$("#f_"+f).options].slice(1).map(o=>`<option value="${esc(o.value)}">`).join("")}</datalist>`).join("")}`;
+  $("#detail").classList.add("open");
+  let tags = [...(a.tags||[])];
+  const redrawTags = () => $("#tagBox").innerHTML = tags.map(x=>`<span class="chip">${esc(x)}<button data-rm="${esc(x)}">×</button></span>`).join("");
+  $("#close").onclick = () => $("#detail").classList.remove("open");
+  $("#cpLink").onclick = () => isDrive ? copy(a.web_url, "Link Drive disalin") : copy(fileStationLink(a), "Link NAS disalin");
+  if ($("#cpSmb")) $("#cpSmb").onclick = () => copy(smbPath(a), "Laluan rangkaian disalin");
+  $("#e_newtag").onkeydown = e => { if(e.key==="Enter"){ const v=e.target.value.trim().toLowerCase(); if(v&&!tags.includes(v)) tags.push(v); e.target.value=""; redrawTags(); } };
+  $("#detail").onclick = e => {
+    const rm = e.target.dataset?.rm, add = e.target.dataset?.add, ty = e.target.dataset?.type;
+    if (rm){ tags = tags.filter(x=>x!==rm); redrawTags(); }
+    if (add){ if(!tags.includes(add)) tags.push(add); e.target.remove(); redrawTags(); }
+    if (ty){ $("#e_asset_type").value = ty; e.target.remove(); }
+  };
+  $("#save").onclick = async () => {
+    const val = id => $("#e_"+id).value.trim() || null;
+    const upd = { usage:$("#e_usage").value, usage_note:val("usage_note"), campaign:val("campaign"), country:val("country"),
+      partner:val("partner"), year: val("year") ? parseInt(val("year")) : null, asset_type:val("asset_type"), tags, updated_by: user.email || ($("#e_name")?.value.trim() || null) };
+    if (!user.email) { try { localStorage.setItem("mal_name", upd.updated_by || ""); } catch {} }
+    const { error } = await sb.from("assets").update(upd).eq("id", a.id);
+    if (error) return toast("Gagal simpan: "+error.message);
+    Object.assign(a, upd, { updated_at:new Date().toISOString() });
+    const el = document.querySelector(`.card[data-id="${a.id}"]`); if (el) el.outerHTML = card(a);
+    toast("Disimpan"); loadFacets();
+  };
+}
+document.addEventListener("keydown", e => { if(e.key==="Escape") $("#detail").classList.remove("open"); if(e.key==="/" && document.activeElement.tagName!=="INPUT"){ e.preventDefault(); $("#q").focus(); } });
+
+initAuth();
+</script>
+</body>
+</html>
